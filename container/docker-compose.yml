@@ -1,0 +1,100 @@
+version: '3.8'
+
+# 服务设置
+services:
+  # Nginx 服务器
+  nginx:
+    build: 
+      context: ./nginx
+      dockerfile: dockerfile
+    container_name: coding-php-nginx
+    depends_on: 
+      - phpfpm73
+      - phpfpm80
+    restart: always
+    ports: 
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/ngx
+      - ./nginx/conf:/etc/nginx:ro
+      - ../example:/example
+    networks: 
+      - coding-php-net
+
+  # MySQL服务器
+  mysql:
+    image: mysql:8.0.23
+    container_name: coding-php-mysql
+    restart: always
+    ports: 
+      - "3306:3306"
+      - "33060:33060"
+    volumes: 
+      - ./mysql/my.cnf:/etc/my.cnf:ro
+      - ./mysql/conf:/etc/mysql:ro
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/file:/var/lib/mysql-files
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=wordpress
+    networks: 
+      - coding-php-net
+  
+  # Redis 服务器
+  redis:
+    image: redis:6.2.2
+    container_name: coding-php-redis
+    restart: always
+    ports:
+      - 6379:6379
+    volumes: 
+      - ./redis/conf:/etc/redis:ro
+      - ./redis/data:/data
+      - ./redis/module:/module
+    command: redis-server /etc/redis/redis.conf
+    networks: 
+      - coding-php-net
+  
+  # PHP 7.3 FastCGI 服务
+  phpfpm73:
+    build:
+      context: ./phpfpm73
+      dockerfile: dockerfile
+    container_name: php-fpm-73
+    restart: always
+    depends_on: 
+      - mysql
+      - redis
+    volumes:
+      - ./nginx:/ngx
+      - ./phpfpm73:/phpfpm
+      - ../example:/example
+      - C:\:/c
+    networks: 
+      - coding-php-net
+
+  # PHP 8.0 FastCGI 服务
+  phpfpm80:
+    build:
+      context: ./phpfpm80
+      dockerfile: dockerfile
+    container_name: php-fpm-80
+    restart: always
+    depends_on: 
+      - mysql
+      - redis
+    volumes:
+      - ./nginx:/ngx
+      - ./phpfpm80:/phpfpm
+      - ../example:/example
+      - C:\:/c
+    networks: 
+      - coding-php-net
+
+
+# 网络设置
+networks: 
+  coding-php-net:
+    name: coding-php-net
+    driver: bridge
